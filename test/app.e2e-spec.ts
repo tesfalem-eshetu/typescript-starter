@@ -12,7 +12,13 @@ describe('AppController (e2e)', () => {
     await ctx.close();
   });
 
-  it('GET / returns the hello world payload', async () => {
-    await request(ctx.httpServer).get('/').expect(200).expect('Hello World!');
+  it('GET / returns the HTML landing page that links to Swagger UI', async () => {
+    const res = await request(ctx.httpServer)
+      .get('/')
+      .expect(200)
+      .expect('Content-Type', /text\/html/);
+
+    expect(res.text).toContain('<title>Events API</title>');
+    expect(res.text).toContain('href="/api"');
   });
 });

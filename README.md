@@ -4,9 +4,9 @@ A small NestJS service that manages users and events, persists them in
 PostgreSQL, and exposes a `mergeAll` operation that collapses every
 overlapping event a given user is invited to into a single event.
 
-Built on top of the official `nestjs/typescript-starter`. The original
-`AppController` is left untouched so the boilerplate sanity check still
-passes; everything else lives under `src/users` and `src/events`.
+Built on top of the official `nestjs/typescript-starter`. The root route
+(`GET /`) renders a small HTML landing page that points at the Swagger
+explorer; the actual feature lives under `src/users` and `src/events`.
 
 ## Highlights
 
