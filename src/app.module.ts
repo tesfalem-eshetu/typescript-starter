@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import configuration from './config/configuration';
 import { envValidationSchema } from './config/env.validation';
 import { typeOrmAsyncConfig } from './database/typeorm.config';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { typeOrmAsyncConfig } from './database/typeorm.config';
       validationSchema: envValidationSchema,
     }),
     TypeOrmModule.forRootAsync(typeOrmAsyncConfig),
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

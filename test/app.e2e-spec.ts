@@ -1,29 +1,18 @@
-import { INestApplication } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { App } from 'supertest/types';
-import { AppModule } from './../src/app.module';
+import { createTestApp, E2ETestContext } from './helpers/test-app.factory';
 
 describe('AppController (e2e)', () => {
-  let app: INestApplication<App>;
+  let ctx: E2ETestContext;
 
   beforeAll(async () => {
-    const moduleFixture = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    await app.init();
+    ctx = await createTestApp();
   });
 
   afterAll(async () => {
-    await app.close();
+    await ctx.close();
   });
 
-  it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .expect('Hello World!');
+  it('GET / returns the hello world payload', async () => {
+    await request(ctx.httpServer).get('/').expect(200).expect('Hello World!');
   });
 });
