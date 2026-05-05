@@ -86,10 +86,13 @@
       "seed.ts",
       "\\.module\\.ts$",
       "\\.dto\\.ts$",
+      "\\.controller\\.ts$",
       "entities/",
       "enums/",
       "database/",
-      "config/"
+      "config/",
+      "common/filters/",
+      "common/validators/"
     ],
     "coverageThreshold": {
       "**/merge/merge.ts": {
