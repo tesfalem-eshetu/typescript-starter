@@ -16,7 +16,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/jest/bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "seed": "ts-node -r tsconfig-paths/register src/seed.ts"
   },
   "engines": {
     "npm": ">=10.0.0",
@@ -79,6 +80,25 @@
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],
+    "coveragePathIgnorePatterns": [
+      "/node_modules/",
+      "main.ts",
+      "seed.ts",
+      "\\.module\\.ts$",
+      "\\.dto\\.ts$",
+      "entities/",
+      "enums/",
+      "database/",
+      "config/"
+    ],
+    "coverageThreshold": {
+      "**/merge/merge.ts": {
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      }
+    },
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
   },
