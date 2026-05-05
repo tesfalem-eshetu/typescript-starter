@@ -32,10 +32,14 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     const { message, error } = this.extractMessage(exception, status);
 
-    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+    if (status >= 500) {
+      const detail =
+        exception instanceof Error
+          ? exception.stack
+          : JSON.stringify(exception);
       this.logger.error(
         `${request.method} ${request.url} -> ${status}`,
-        exception instanceof Error ? exception.stack : String(exception),
+        detail,
       );
     }
 
@@ -72,7 +76,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     return {
       message:
-        exception instanceof Error ? exception.message : 'Internal server error',
+        exception instanceof Error
+          ? exception.message
+          : 'Internal server error',
       error: this.defaultError(status),
     };
   }

@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, ManyToMany, PrimaryGeneratedColumn } from 'typeorm';
+import type { Event } from '../../events/entities/event.entity';
 
 @Entity('users')
 export class User {
@@ -8,7 +9,6 @@ export class User {
   @Column({ type: 'varchar', length: 200 })
   name!: string;
 
-  // The `events` inverse side of the User <-> Event many-to-many relation
-  // is added together with the Event entity to keep both sides of the
-  // relation introduced atomically.
+  @ManyToMany('Event', (event: Event) => event.invitees)
+  events!: Event[];
 }
