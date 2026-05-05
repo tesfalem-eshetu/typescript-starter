@@ -4,10 +4,11 @@ import { UsersModule } from '../users/users.module';
 import { Event } from './entities/event.entity';
 import { EventsController } from './events.controller';
 import { EventsService } from './events.service';
+import { MergeController } from './merge/merge.controller';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Event]), UsersModule],
-  controllers: [EventsController],
+  controllers: [EventsController, MergeController],
   providers: [EventsService],
   exports: [EventsService],
 })

@@ -1,7 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { User } from '../users/entities/user.entity';
 import { CreateEventDto } from './dto/create-event.dto';
 import { Event } from './entities/event.entity';
@@ -20,10 +20,28 @@ const buildMockRepo = <T extends object>(): MockRepo<T> => ({
   remove: jest.fn(),
 });
 
+interface MockEm {
+  findOne: jest.Mock;
+  find: jest.Mock;
+  create: jest.Mock;
+  save: jest.Mock;
+  remove: jest.Mock;
+}
+
+const buildMockEm = (): MockEm => ({
+  findOne: jest.fn(),
+  find: jest.fn(),
+  create: jest.fn((_entity, init) => init),
+  save: jest.fn((entity) => Promise.resolve(entity)),
+  remove: jest.fn((entities) => Promise.resolve(entities)),
+});
+
 describe('EventsService', () => {
   let service: EventsService;
   let eventsRepo: MockRepo<Event>;
   let usersRepo: MockRepo<User>;
+  let dataSource: { transaction: jest.Mock };
+  let em: MockEm;
 
   const dto: CreateEventDto = {
     title: 'Standup',
@@ -37,11 +55,19 @@ describe('EventsService', () => {
   beforeEach(async () => {
     eventsRepo = buildMockRepo<Event>();
     usersRepo = buildMockRepo<User>();
+    em = buildMockEm();
+    dataSource = {
+      transaction: jest.fn((cb: (em: MockEm) => unknown) =>
+        Promise.resolve(cb(em)),
+      ),
+    };
+
     const moduleRef: TestingModule = await Test.createTestingModule({
       providers: [
         EventsService,
         { provide: getRepositoryToken(Event), useValue: eventsRepo },
         { provide: getRepositoryToken(User), useValue: usersRepo },
+        { provide: DataSource, useValue: dataSource },
       ],
     }).compile();
 
@@ -158,6 +184,140 @@ describe('EventsService', () => {
         NotFoundException,
       );
       expect(eventsRepo.remove).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('mergeAllForUser', () => {
+    it('opens a transaction and locks the user row pessimistically', async () => {
+      em.findOne.mockResolvedValue({ id: 'user-1' });
+      jest
+        .spyOn(
+          service as unknown as { loadUserEvents: () => Promise<Event[]> },
+          'loadUserEvents',
+        )
+        .mockResolvedValue([]);
+
+      await service.mergeAllForUser('user-1');
+
+      expect(dataSource.transaction).toHaveBeenCalledTimes(1);
+      expect(em.findOne).toHaveBeenCalledWith(User, {
+        where: { id: 'user-1' },
+        lock: { mode: 'pessimistic_write' },
+      });
+    });
+
+    it('throws NotFoundException when the user does not exist', async () => {
+      em.findOne.mockResolvedValue(null);
+
+      await expect(service.mergeAllForUser('missing')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(em.save).not.toHaveBeenCalled();
+      expect(em.remove).not.toHaveBeenCalled();
+    });
+
+    it('returns the user events unchanged when there are no overlaps (no DB writes)', async () => {
+      em.findOne.mockResolvedValue({ id: 'user-1' });
+      const userEvents = [
+        {
+          id: 'e1',
+          title: 'A',
+          description: null,
+          status: EventStatus.TODO,
+          startTime: new Date('2026-01-01T10:00:00Z'),
+          endTime: new Date('2026-01-01T11:00:00Z'),
+          invitees: [{ id: 'user-1' }],
+        },
+        {
+          id: 'e2',
+          title: 'B',
+          description: null,
+          status: EventStatus.TODO,
+          startTime: new Date('2026-01-01T12:00:00Z'),
+          endTime: new Date('2026-01-01T13:00:00Z'),
+          invitees: [{ id: 'user-1' }],
+        },
+      ] as unknown as Event[];
+      jest
+        .spyOn(
+          service as unknown as { loadUserEvents: () => Promise<Event[]> },
+          'loadUserEvents',
+        )
+        .mockResolvedValue(userEvents);
+
+      const result = await service.mergeAllForUser('user-1');
+
+      expect(result).toBe(userEvents);
+      expect(em.save).not.toHaveBeenCalled();
+      expect(em.remove).not.toHaveBeenCalled();
+    });
+
+    it('inserts a merged event and removes the source events when overlap is detected', async () => {
+      em.findOne.mockResolvedValue({ id: 'user-1' });
+      const userEvents = [
+        {
+          id: 'e1',
+          title: 'A',
+          description: null,
+          status: EventStatus.TODO,
+          startTime: new Date('2026-01-01T14:00:00Z'),
+          endTime: new Date('2026-01-01T15:00:00Z'),
+          invitees: [{ id: 'user-1' }],
+        },
+        {
+          id: 'e2',
+          title: 'B',
+          description: null,
+          status: EventStatus.IN_PROGRESS,
+          startTime: new Date('2026-01-01T14:45:00Z'),
+          endTime: new Date('2026-01-01T16:00:00Z'),
+          invitees: [{ id: 'user-1' }, { id: 'user-2' }],
+        },
+      ] as unknown as Event[];
+      em.find.mockResolvedValue([
+        { id: 'user-1', name: 'Ada' },
+        { id: 'user-2', name: 'Grace' },
+      ]);
+      const loadSpy = jest
+        .spyOn(
+          service as unknown as { loadUserEvents: () => Promise<Event[]> },
+          'loadUserEvents',
+        )
+        .mockResolvedValueOnce(userEvents)
+        .mockResolvedValueOnce([{ id: 'merged' } as unknown as Event]);
+
+      const result = await service.mergeAllForUser('user-1');
+
+      expect(em.save).toHaveBeenCalledTimes(1);
+      expect(em.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'A | B',
+          status: EventStatus.IN_PROGRESS,
+          startTime: new Date('2026-01-01T14:00:00Z'),
+          endTime: new Date('2026-01-01T16:00:00Z'),
+          invitees: [
+            { id: 'user-1', name: 'Ada' },
+            { id: 'user-2', name: 'Grace' },
+          ],
+        }),
+      );
+      expect(em.remove).toHaveBeenCalledTimes(1);
+      expect(em.remove).toHaveBeenCalledWith(userEvents);
+      expect(loadSpy).toHaveBeenCalledTimes(2);
+      expect(result).toEqual([{ id: 'merged' }]);
+    });
+
+    it('returns [] when the user has no events', async () => {
+      em.findOne.mockResolvedValue({ id: 'user-1' });
+      jest
+        .spyOn(
+          service as unknown as { loadUserEvents: () => Promise<Event[]> },
+          'loadUserEvents',
+        )
+        .mockResolvedValue([]);
+
+      await expect(service.mergeAllForUser('user-1')).resolves.toEqual([]);
+      expect(em.save).not.toHaveBeenCalled();
     });
   });
 });
