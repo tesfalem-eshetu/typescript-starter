@@ -16,7 +16,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/jest/bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "seed": "ts-node -r tsconfig-paths/register src/seed.ts"
   },
   "engines": {
     "npm": ">=10.0.0",
@@ -24,10 +25,18 @@
   },
   "dependencies": {
     "@nestjs/common": "^11.0.17",
+    "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.1.11",
+    "@nestjs/swagger": "^11.4.2",
+    "@nestjs/typeorm": "^11.0.1",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
+    "joi": "^18.2.1",
+    "pg": "^8.20.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "typeorm": "^0.3.28"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -37,6 +46,7 @@
     "@nestjs/testing": "^11.0.1",
     "@swc/cli": "^0.6.0",
     "@swc/core": "^1.10.8",
+    "@testcontainers/postgresql": "^11.14.0",
     "@types/express": "^5.0.0",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.10.7",
@@ -70,6 +80,28 @@
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],
+    "coveragePathIgnorePatterns": [
+      "/node_modules/",
+      "main.ts",
+      "seed.ts",
+      "\\.module\\.ts$",
+      "\\.dto\\.ts$",
+      "\\.controller\\.ts$",
+      "entities/",
+      "enums/",
+      "database/",
+      "config/",
+      "common/filters/",
+      "common/validators/"
+    ],
+    "coverageThreshold": {
+      "**/merge/merge.ts": {
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      }
+    },
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
   },
