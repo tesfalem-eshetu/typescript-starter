@@ -16,6 +16,7 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -38,7 +39,15 @@ export class EventsController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Retrieve an event by id (with invitees).' })
+  @ApiOperation({
+    summary:
+      'Retrieve an event by its event id. The response includes the invitee list.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The event id (UUIDv4) returned from POST /events.',
+    format: 'uuid',
+  })
   @ApiOkResponse({ type: EventResponseDto })
   @ApiNotFoundResponse({ description: 'Event not found.' })
   async findOne(
@@ -50,7 +59,12 @@ export class EventsController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete an event by id.' })
+  @ApiOperation({ summary: 'Delete an event by its event id.' })
+  @ApiParam({
+    name: 'id',
+    description: 'The event id (UUIDv4) of the event to delete.',
+    format: 'uuid',
+  })
   @ApiNoContentResponse({ description: 'Event deleted.' })
   @ApiNotFoundResponse({ description: 'Event not found.' })
   async remove(

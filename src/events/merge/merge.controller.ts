@@ -10,6 +10,7 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
 import { EventResponseDto } from '../dto/event-response.dto';
@@ -29,8 +30,15 @@ export class MergeController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
-      'Merge all overlapping events for the user. ' +
+      'Merge all overlapping events the user is invited to. ' +
       'Source events are deleted and replaced by one event per overlap group.',
+  })
+  @ApiParam({
+    name: 'userId',
+    description:
+      'The user id (UUIDv4) whose events should be merged. ' +
+      'Only events the user is invited to are considered.',
+    format: 'uuid',
   })
   @ApiOkResponse({
     type: [EventResponseDto],

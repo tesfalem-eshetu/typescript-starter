@@ -11,6 +11,7 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -32,7 +33,13 @@ export class UsersController {
 
   @Get(':id')
   @ApiOperation({
-    summary: 'Retrieve a user by id, including their event ids.',
+    summary:
+      'Retrieve a user by their user id. The response includes the ids of every event they are invited to.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The user id (UUIDv4) returned from POST /users.',
+    format: 'uuid',
   })
   @ApiOkResponse({ type: UserResponseDto })
   @ApiNotFoundResponse({ description: 'User not found.' })
